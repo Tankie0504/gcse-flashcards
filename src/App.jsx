@@ -1729,7 +1729,6 @@ function Flashcard({ card, confidence, setConfidence, onEditCard, onDeleteCard }
         }}
       >
         <div
-          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             width: '100%',

@@ -880,6 +880,9 @@ function Confetti({ pieces }) {
 
 export default function FlashcardsApp() {
   const [confidenceLevels, setConfidenceLevels] = useState({});
+  const [username, setUsername] = useState('');
+  const [tempUsername, setTempUsername] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState('none');
   const [activeSubject, setActiveSubject] = useState('All');
   const [activePhysicsTopic, setActivePhysicsTopic] = useState('All');
@@ -891,6 +894,34 @@ export default function FlashcardsApp() {
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
   const [editingCardIndex, setEditingCardIndex] = useState(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('flashcard_username');
+
+    if (savedUser) {
+      setUsername(savedUser);
+      setTempUsername(savedUser);
+      setIsLoggedIn(true);
+
+      const savedConfidence = localStorage.getItem(`${savedUser}_confidence`);
+      const savedCustomCards = localStorage.getItem(`${savedUser}_customCards`);
+
+      if (savedConfidence) {
+        setConfidenceLevels(JSON.parse(savedConfidence));
+      }
+
+      if (savedCustomCards) {
+        setCustomCards(JSON.parse(savedCustomCards));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (username) {
+      localStorage.setItem(`${username}_confidence`, JSON.stringify(confidenceLevels));
+      localStorage.setItem(`${username}_customCards`, JSON.stringify(customCards));
+    }
+  }, [confidenceLevels, customCards, username]);
   
 
   const launchConfetti = () => {
@@ -997,8 +1028,8 @@ export default function FlashcardsApp() {
       'What is the word equation for photosynthesis?',
       'What is respiration?'
     ],
-    Genetics: [
-      'What is meiosis?',
+    Inheritance: [
+      'What is meiosis?',,
       'What are gametes?',
       'What is DNA?',
       'What is natural selection?',
@@ -1189,6 +1220,92 @@ export default function FlashcardsApp() {
     }
   });
 
+  if (!isLoggedIn) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#f3f4f6',
+          fontFamily: 'Arial, sans-serif',
+          padding: '20px',
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '40px',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+          }}
+        >
+          <h1
+            style={{
+              textAlign: 'center',
+              marginBottom: '12px',
+              color: '#111827',
+              fontSize: '32px',
+            }}
+          >
+            GCSE Science Flashcards
+          </h1>
+
+          <p
+            style={{
+              textAlign: 'center',
+              color: '#6b7280',
+              marginBottom: '24px',
+            }}
+          >
+            Log in to save your revision progress and custom flashcards.
+          </p>
+
+          <input
+            value={tempUsername}
+            onChange={(e) => setTempUsername(e.target.value)}
+            placeholder="Enter a username"
+            style={{
+              width: '100%',
+              padding: '14px',
+              borderRadius: '12px',
+              border: '1px solid #d1d5db',
+              fontSize: '16px',
+              marginBottom: '18px',
+              boxSizing: 'border-box',
+            }}
+          />
+
+          <button
+            onClick={() => {
+              if (!tempUsername.trim()) return;
+
+              setUsername(tempUsername);
+              localStorage.setItem('flashcard_username', tempUsername);
+              setIsLoggedIn(true);
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              borderRadius: '12px',
+              border: 'none',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '16px',
+            }}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Confetti pieces={confettiPieces} />
@@ -1272,7 +1389,7 @@ export default function FlashcardsApp() {
               marginBottom: '24px',
             }}
           >
-            {['All', 'CellBiology', 'Organisation', 'Cells', 'Bioenergetics', 'Genetics', 'Homeostasis', 'InfectionAndResponse', 'PlantHormones'].map((topic) => (
+            {['All', 'CellBiology', 'Organisation', 'Cells', 'Bioenergetics', 'Inheritance', 'Genetics', 'Homeostasis', 'InfectionAndResponse', 'PlantHormones'].map((topic) => (
               <button
                 key={topic}
                 onClick={() => setActiveBiologyTopic(topic)}
@@ -1612,6 +1729,7 @@ function Flashcard({ card, confidence, setConfidence, onEditCard, onDeleteCard }
         }}
       >
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             width: '100%',
@@ -1650,7 +1768,7 @@ function Flashcard({ card, confidence, setConfidence, onEditCard, onDeleteCard }
             <h2
               style={{
                 fontSize: card.question.length < 40 ? '28px' : card.question.length < 80 ? '22px' : '18px',
-              lineHeight: '1.5',
+                lineHeight: '1.5',
                 color: '#111827',
               }}
             >
@@ -1771,6 +1889,8 @@ function Flashcard({ card, confidence, setConfidence, onEditCard, onDeleteCard }
                     borderRadius: '999px',
                     padding: '8px 12px',
                     cursor: 'pointer',
+                    zIndex: 20,
+                    position: 'relative',
                   }}
                 >
                   Edit
@@ -1794,20 +1914,75 @@ function Flashcard({ card, confidence, setConfidence, onEditCard, onDeleteCard }
             boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'flex-start',
-            justifyContent: 'flex-start',
+            justifyContent: 'space-between',
             textAlign: 'left',
+            flexDirection: 'column',
             overflowY: 'auto',
             paddingTop: '20px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           }}
         >
-          <h2
-            style={{
-              fontSize: card.answer.length < 120 ? '24px' : card.answer.length < 250 ? '20px' : '17px',
-            }}
-          >
-            {card.answer}
-          </h2>
+          <>
+            <h2
+              style={{
+                fontSize: card.answer.length < 120 ? '24px' : card.answer.length < 250 ? '20px' : '17px',
+                marginBottom: '20px',
+              }}
+            >
+              {card.answer}
+            </h2>
+
+            {card.topic === 'Custom' && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  marginTop: 'auto',
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditCard(card);
+                  }}
+                  style={{
+                    backgroundColor: 'white',
+                    color: '#2563eb',
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Edit
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    const shouldDelete = window.confirm('Delete this flashcard?');
+
+                    if (shouldDelete) {
+                      onDeleteCard(card);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#111827',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </>
         </div>
       </div>
     </div>
